@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Online Tic Tac Toe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  text-align: center;
+}
+
+h1 { margin-top: 20px; }
+
+.controls {
+  margin: 20px;
+}
+
+input, select, button {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 6px;
+  border: none;
+}
+
+button {
+  cursor: pointer;
+  background: #00e676;
+  font-weight: bold;
+}
+
+.board {
+  display: grid;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.cell {
+  width: 80px;
+  height: 80px;
+  font-size: 2rem;
+  background: white;
+  color: black;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.highlight {
+  background: gold !important;
+}
+
+footer {
+  margin-top: 30px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Online Tic Tac Toe</h1>
+
+<div class="controls">
+  <input id="username" placeholder="Your Name" />
+  <input id="room" placeholder="Room Code" />
+  <select id="size">
+    <option value="3">3 × 3</option>
+    <option value="4">4 × 4</option>
+  </select>
+  <button onclick="join()">Join Game</button>
+  <button onclick="resetGame()">Reset</button>
+</div>
+
+<div id="status"></div>
+<div id="board" class="board"></div>
+
+<footer>
+  Created by <b>Shivnath Pradhan</b>
+</footer>
+
+<script>
+let ws;
+let gridSize = 3;
+let myTurn = false;
+
+function join() {
+  const room = document.getElementById("room").value;
+  const name = document.getElementById("username").value || "Player";
+  gridSize = Number(document.getElementById("size").value);
+
+  if (!room) {
+    alert("Enter room code");
+    return;
+  }
+
+const ws = new WebSocket(
+  "wss://tic-tac-toe-backend-5.onrender.com/ws/" + room
+);
+
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({
+      type: "join",
+      name: name,
+      grid: gridSize,
+      timer: 15,
+      ai: false
+    }));
+    document.getElementById("status").innerText = "Connected ✔";
+  };
+
+  ws.onerror = () => {
+    document.getElementById("status").innerText = "Connection Error ❌";
+  };
+
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    renderBoard(data.board, data.win_line);
+    myTurn = data.turn === 0; // player 0 turn
+
+    document.getElementById("status").innerText =
+      data.winner
+        ? data.winner === "Draw"
+          ? "Game Draw 🤝"
+          : `Winner: ${data.names[data.winner]} 🎉`
+        : `Turn: ${data.names[data.turn]}`;
+  };
+}
+
+function renderBoard(board, winLine) {
+  const b = document.getElementById("board");
+  b.innerHTML = "";
+  b.style.gridTemplateColumns = `repeat(${gridSize}, 80px)`;
+
+  board.forEach((cell, i) => {
+    const btn = document.createElement("button");
+    btn.className = "cell";
+
+    if (cell === 0) btn.innerText = "X";
+    if (cell === 1) btn.innerText = "O";
+
+    if (winLine && winLine.includes(i)) {
+      btn.classList.add("highlight");
+    }
+
+    btn.onclick = () => {
+      ws.send(JSON.stringify({
+        type: "move",
+        index: i
+      }));
+    };
+
+    b.appendChild(btn);
+  });
+}
+
+function resetGame() {
+  ws.send(JSON.stringify({ type: "reset" }));
+}
+</script>
+
+
+</body>
+</html>
