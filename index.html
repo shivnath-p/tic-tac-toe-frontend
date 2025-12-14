@@ -87,7 +87,6 @@ footer {
 <script>
 let ws;
 let gridSize = 3;
-let myTurn = false;
 
 function join() {
   const room = document.getElementById("room").value;
@@ -99,10 +98,9 @@ function join() {
     return;
   }
 
-const ws = new WebSocket(
-  "wss://tic-tac-toe-backend-5.onrender.com/ws/" + room
-);
-
+  ws = new WebSocket(
+    "wss://tic-tac-toe-backend-5.onrender.com/ws/" + room
+  );
 
   ws.onopen = () => {
     ws.send(JSON.stringify({
@@ -115,21 +113,19 @@ const ws = new WebSocket(
     document.getElementById("status").innerText = "Connected ✔";
   };
 
-  ws.onerror = () => {
-    document.getElementById("status").innerText = "Connection Error ❌";
-  };
-
   ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
     renderBoard(data.board, data.win_line);
-    myTurn = data.turn === 0; // player 0 turn
-
     document.getElementById("status").innerText =
       data.winner
-        ? data.winner === "Draw"
-          ? "Game Draw 🤝"
-          : `Winner: ${data.names[data.winner]} 🎉`
-        : `Turn: ${data.names[data.turn]}`;
+        ? (data.winner === "Draw"
+            ? "Game Draw 🤝"
+            : "Winner: " + data.names[data.winner])
+        : "Turn: " + data.names[data.turn];
+  };
+
+  ws.onerror = () => {
+    document.getElementById("status").innerText = "Connection error ❌";
   };
 }
 
@@ -168,3 +164,4 @@ function resetGame() {
 
 </body>
 </html>
+
