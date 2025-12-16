@@ -14,16 +14,16 @@ body {
   text-align: center;
 }
 
-h1 { margin-top: 20px; }
+h1 { margin-top: 16px; }
 
 .controls {
-  margin: 20px;
+  margin: 15px;
 }
 
 input, select, button {
   padding: 10px;
-  margin: 5px;
-  border-radius: 6px;
+  margin: 6px;
+  border-radius: 8px;
   border: none;
 }
 
@@ -41,17 +41,21 @@ button {
 }
 
 .cell {
-  width: 80px;
-  height: 80px;
+  width: min(22vw, 80px);
+  height: min(22vw, 80px);
   font-size: 2rem;
   background: white;
   color: black;
-  border-radius: 10px;
-  cursor: pointer;
+  border-radius: 12px;
 }
 
 .highlight {
   background: gold !important;
+}
+
+.info {
+  margin-top: 10px;
+  font-size: 18px;
 }
 
 footer {
@@ -73,11 +77,17 @@ footer {
     <option value="3">3 × 3</option>
     <option value="4">4 × 4</option>
   </select>
+  <label>
+    <input type="checkbox" id="aiToggle" /> Play vs AI
+  </label>
+  <br />
   <button onclick="join()">Join Game</button>
   <button onclick="resetGame()">Reset</button>
 </div>
 
-<div id="status"></div>
+<div class="info" id="status">Not connected</div>
+<div class="info" id="timer">⏱ Timer: --</div>
+
 <div id="board" class="board"></div>
 
 <footer>
@@ -87,11 +97,13 @@ footer {
 <script>
 let ws;
 let gridSize = 3;
+let playerId = null;
 
 function join() {
   const room = document.getElementById("room").value;
   const name = document.getElementById("username").value || "Player";
   gridSize = Number(document.getElementById("size").value);
+  const ai = document.getElementById("aiToggle").checked;
 
   if (!room) {
     alert("Enter room code");
@@ -105,34 +117,48 @@ function join() {
   ws.onopen = () => {
     ws.send(JSON.stringify({
       type: "join",
-      name: name,
+      name,
       grid: gridSize,
       timer: 15,
-      ai: false
+      ai
     }));
     document.getElementById("status").innerText = "Connected ✔";
   };
 
   ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
+
+    if (playerId === null && data.names) {
+      playerId = data.names.indexOf(name);
+    }
+
     renderBoard(data.board, data.win_line);
-    document.getElementById("status").innerText =
-      data.winner
-        ? (data.winner === "Draw"
-            ? "Game Draw 🤝"
-            : "Winner: " + data.names[data.winner])
-        : "Turn: " + data.names[data.turn];
+
+    document.getElementById("timer").innerText =
+      `⏱ Timer: ${data.time_left}s`;
+
+    if (data.winner !== null) {
+      document.getElementById("status").innerText =
+        data.winner === "Draw"
+          ? "Game Draw 🤝"
+          : `Winner: ${data.names[data.winner]} 🎉`;
+    } else {
+      document.getElementById("status").innerText =
+        data.turn === playerId
+          ? "Your Turn 🎯"
+          : `Opponent's Turn (${data.names[data.turn]})`;
+    }
   };
 
   ws.onerror = () => {
-    document.getElementById("status").innerText = "Connection error ❌";
+    document.getElementById("status").innerText = "Connection Error ❌";
   };
 }
 
 function renderBoard(board, winLine) {
   const b = document.getElementById("board");
   b.innerHTML = "";
-  b.style.gridTemplateColumns = `repeat(${gridSize}, 80px)`;
+  b.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
 
   board.forEach((cell, i) => {
     const btn = document.createElement("button");
@@ -161,7 +187,5 @@ function resetGame() {
 }
 </script>
 
-
 </body>
 </html>
-
